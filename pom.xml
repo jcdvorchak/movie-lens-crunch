@@ -10,7 +10,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <main.class>demo.WordCount</main.class>
+        <main.class>movielens.MovieTagCount</main.class>
     </properties>
 
     <dependencies>

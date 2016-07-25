@@ -45,9 +45,9 @@ public class WordCount extends Configured implements Tool {
 
         //pipeline.writeTextFile(counts, outputPath);
         counts.write(At.textFile(outputPath), Target.WriteMode.OVERWRITE);
-
         PipelineResult result = pipeline.done();
         return result.succeeded() ? 0 : 1;
+
     }
 
     public static void main(String[] args) throws Exception {

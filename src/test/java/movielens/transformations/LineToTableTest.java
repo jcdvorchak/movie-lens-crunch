@@ -1,15 +1,12 @@
-package movielens;
+package movielens.transformations;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.crunch.PCollection;
 import org.apache.crunch.PTable;
 import org.apache.crunch.Pair;
 import org.apache.crunch.impl.mem.MemPipeline;
-import org.apache.crunch.lib.Sample;
 import org.apache.crunch.types.writable.Writables;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Created by dvorcjc on 7/21/2016.
@@ -31,12 +28,12 @@ public class LineToTableTest {
             ));
 
     @Test
-    public void testMap() throws Exception {
+    public void testProcess() throws Exception {
 
         MemPipeline.getInstance();
 
         PTable<String,String> movieTable = movies.parallelDo(
-                new LineToTable(0,1,"::"),
+                new LineToTable(0,1,3,"::"),
                 Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
