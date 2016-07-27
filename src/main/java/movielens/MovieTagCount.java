@@ -1,6 +1,6 @@
 package movielens;
 
-import movielens.transformations.LineToTable;
+import movielens.transformations.LineToPair;
 import org.apache.crunch.*;
 import org.apache.crunch.fn.Aggregators;
 import org.apache.crunch.impl.mr.MRPipeline;
@@ -8,18 +8,17 @@ import org.apache.crunch.io.From;
 import org.apache.crunch.io.To;
 import org.apache.crunch.lib.Join;
 import org.apache.crunch.lib.SecondarySort;
-import org.apache.crunch.lib.Sort;
 import org.apache.crunch.types.writable.Writables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.util.Iterator;
+
 /**
- * Group Movies and Tags to find the counts of tags per movie
- * todo sort output
- * <p/>
+ * Find the most frequent tag for a movie
+ *
  * Created by dvorcjc on 7/21/2016.
  */
 public class MovieTagCount extends Configured implements Tool {
@@ -40,7 +39,7 @@ public class MovieTagCount extends Configured implements Tool {
         PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies.dat"));
         // to kv pair
         PTable<String, String> movieTable = movies.parallelDo(
-                new LineToTable(0, 1, 3, "::"),
+                new LineToPair(0, 1, 3, "::"),
                 Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
@@ -48,7 +47,7 @@ public class MovieTagCount extends Configured implements Tool {
         PCollection<String> tags = pipeline.read(From.textFile(inputPath + "/tags.dat"));
         // to kv pair
         PTable<String, String> tagTable = tags.parallelDo(
-                new LineToTable(1, 2, 4, "::"),
+                new LineToPair(1, 2, 4, "::"),
                 Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
@@ -62,19 +61,23 @@ public class MovieTagCount extends Configured implements Tool {
         );
 
         // aggregate on the value (1) for each movie+tag pair
-        PTable<Pair<String, String>, Long> movieTagCount = movieTagKey.groupByKey().combineValues(Aggregators.SUM_LONGS());
+        PTable<Pair<String, String>, Long> movieTagCount = movieTagKey.groupByKey()
+                .combineValues(Aggregators.SUM_LONGS()
+        );
 
-        // transform to a collection for sorting purposes
-        PCollection<Tuple3<String,String,Long>>  movieTagCol = movieTagCount.parallelDo(
-                new MovieTagCountColumns(),
+        // format for secondary sort
+        PTable<String, Pair<String,Long>> userGenreCountSecondary = movieTagCount.parallelDo(
+                new MovieTagCountPrepSec(),
+                Writables.tableOf(Writables.strings(),Writables.pairs(Writables.strings(),Writables.longs()))
+        );
+
+        // secondary sort to find the max genre count for a rater
+        PCollection<Tuple3<String,String,Long>> userGenreCountCol = SecondarySort.sortAndApply(userGenreCountSecondary,
+                new MovieTagCountMax(),
                 Writables.triples(Writables.strings(),Writables.strings(),Writables.longs())
         );
 
-        // sort by movie, then count
-        Sort.sortTriples(movieTagCol,
-                Sort.ColumnOrder.by(1, Sort.Order.ASCENDING),
-                Sort.ColumnOrder.by(3, Sort.Order.DESCENDING)
-        ).write(To.textFile(outputPath), Target.WriteMode.OVERWRITE);
+        userGenreCountCol.write(To.textFile(outputPath), Target.WriteMode.OVERWRITE);
 
         PipelineResult result = pipeline.done();
         return result.succeeded() ? 0 : 1;
@@ -95,14 +98,31 @@ public class MovieTagCount extends Configured implements Tool {
 
     }
 
-    // could this be a generic flatten?
-    public static class MovieTagCountColumns extends MapFn<Pair<Pair<String,String>,Long>,Tuple3<String,String,Long>> {
+    public static class MovieTagCountPrepSec extends MapFn<Pair<Pair<String,String>,Long>, Pair<String,Pair<String,Long>>> {
 
         @Override
-        public Tuple3<String,String,Long> map(Pair<Pair<String,String>,Long> input) {
-            return new Tuple3<String,String,Long>(input.first().first(),input.first().second(),input.second());
+        public Pair<String,Pair<String,Long>> map(Pair<Pair<String,String>,Long> input) {
+            return Pair.of(input.first().first(),Pair.of(input.first().second(),input.second()));
         }
+    }
 
+    public static class MovieTagCountMax extends MapFn<Pair<String,Iterable<Pair<String,Long>>>, Tuple3<String,String,Long>> {
+
+        @Override
+        public Tuple3<String, String, Long> map(Pair<String, Iterable<Pair<String, Long>>> input) {
+            Iterator<Pair<String,Long>> it = input.second().iterator();
+            Pair<String,Long> maxPair = it.next();
+            Pair<String,Long> currPair = null;
+
+            while (it.hasNext()) {
+                currPair = it.next();
+                if (currPair.second()>maxPair.second()) {
+                    maxPair = currPair;
+                }
+            }
+
+            return Tuple3.of(input.first(), maxPair.first(), maxPair.second());
+        }
     }
 
 }

@@ -1,13 +1,13 @@
 package movielens;
 
 import com.google.common.collect.ImmutableList;
-import movielens.transformations.LineToTable;
+import movielens.comparators.PairFirstComparator;
+import movielens.transformations.LineToPair;
 import org.apache.crunch.*;
 import org.apache.crunch.fn.Aggregators;
 import org.apache.crunch.impl.mem.MemPipeline;
-import org.apache.crunch.io.To;
 import org.apache.crunch.lib.Join;
-import org.apache.crunch.lib.Sort;
+import org.apache.crunch.lib.SecondarySort;
 import org.apache.crunch.types.writable.Writables;
 import org.junit.Test;
 
@@ -52,45 +52,45 @@ public class MovieTagCountTest {
     public void runTest() {
         Pipeline pipeline = MemPipeline.getInstance();
 
-        PTable<String,String> movieTable = movies.parallelDo(
-                new LineToTable(0,1,3,"::"),
-                Writables.tableOf(Writables.strings(),Writables.strings())
+        PTable<String, String> movieTable = movies.parallelDo(
+                new LineToPair(0, 1, 3, "::"),
+                Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
-        PTable<String,String> tagTable = tags.parallelDo(
-                new LineToTable(1,2,4,"::"),
-                Writables.tableOf(Writables.strings(),Writables.strings())
+        PTable<String, String> tagTable = tags.parallelDo(
+                new LineToPair(1, 2, 4, "::"),
+                Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
         // join on movieid
-        PTable<String, Pair<String,String>> movieTagJoin = Join.innerJoin(movieTable,tagTable);
+        PTable<String, Pair<String, String>> movieTagJoin = Join.innerJoin(movieTable, tagTable);
 
         PTable<Pair<String, String>, Long> movieTagKey = movieTagJoin.parallelDo(
                 new MovieTagCount.MovieTagCountPrep(),
                 Writables.tableOf(Writables.pairs(Writables.strings(), Writables.strings()), Writables.longs())
         );
 
-        PTable<Pair<String, String>, Long> movieTagCount = movieTagKey.groupByKey().combineValues(Aggregators.SUM_LONGS());
+        // aggregate on the value (1) for each movie+tag pair
+        PTable<Pair<String, String>, Long> movieTagCount = movieTagKey.groupByKey()
+                .combineValues(Aggregators.SUM_LONGS()
+                );
 
-//        PCollection<Tuple3<String,String,Long>>  movieTagCol = movieTagCount.parallelDo(
-//                new MovieTagCount.MovieTagCountColumns(),
-//                Writables.triples(Writables.strings(),Writables.strings(),Writables.longs())
-//        );
-//
-//        movieTagCol = Sort.sortTriples(movieTagCol,
-//                Sort.ColumnOrder.by(1, Sort.Order.ASCENDING),
-//                Sort.ColumnOrder.by(3, Sort.Order.DESCENDING)
-//        );
+        // format for secondary sort
+        PTable<String, Pair<String,Long>> userGenreCountSecondary = movieTagCount.parallelDo(
+                new MovieTagCount.MovieTagCountPrepSec(),
+                Writables.tableOf(Writables.strings(),Writables.pairs(Writables.strings(),Writables.longs()))
+        );
+
+        // secondary sort to find the max genre count for a rater
+        PCollection<Tuple3<String,String,Long>> userGenreCountCol = SecondarySort.sortAndApply(userGenreCountSecondary,
+                new MovieTagCount.MovieTagCountMax(),
+                Writables.triples(Writables.strings(),Writables.strings(),Writables.longs())
+        );
 
         pipeline.done();
 
-//        Iterable<Tuple3<String,String,Long>> it = movieTagCol.materialize();
-//        for (Tuple3<String,String,Long> record : it) {
-//            System.out.println(record.toString());
-//        }
-
-        Iterable<Pair<Pair<String,String>,Long>> it = movieTagCount.materialize();
-        for (Pair<Pair<String,String>,Long> record : it) {
+        Iterable<Tuple3<String,String,Long>> it = userGenreCountCol.materialize();
+        for (Tuple3<String,String,Long> record : it) {
             System.out.println(record.toString());
         }
     }
