@@ -11,7 +11,7 @@ import org.junit.Test;
 /**
  * Created by dvorcjc on 7/21/2016.
  */
-public class LineToTableTest {
+public class LineToPairTest {
     private PCollection<String> movies = MemPipeline.typedCollectionOf(
             Writables.strings(),
             ImmutableList.of(
@@ -33,7 +33,7 @@ public class LineToTableTest {
         MemPipeline.getInstance();
 
         PTable<String,String> movieTable = movies.parallelDo(
-                new LineToTable(0,1,3,"::"),
+                new LineToPair(0,1,3,"::"),
                 Writables.tableOf(Writables.strings(), Writables.strings())
         );
 
