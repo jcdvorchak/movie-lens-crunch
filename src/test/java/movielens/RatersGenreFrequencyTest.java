@@ -47,22 +47,22 @@ public class RatersGenreFrequencyTest {
     private PTable<Pair<String, String>, Long> ratersGenreCountExpected = MemPipeline.typedTableOf(
             Writables.tableOf(Writables.pairs(Writables.strings(), Writables.strings()), Writables.longs()),
             ImmutableList.of(
-                    Pair.of(Pair.of("1", "Adventure"), 2L),
-                    Pair.of(Pair.of("1", "Animation"), 1L),
-                    Pair.of(Pair.of("1", "Children"), 2L),
-                    Pair.of(Pair.of("1", "Comedy"), 4L),
-                    Pair.of(Pair.of("1", "Fantasy"), 2L),
-                    Pair.of(Pair.of("1", "Romance"), 3L),
-                    Pair.of(Pair.of("2", "Action"), 4L),
-                    Pair.of(Pair.of("2", "Comedy"), 3L),
-                    Pair.of(Pair.of("2", "Crime"), 4L),
-                    Pair.of(Pair.of("2", "Drama"), 1L),
-                    Pair.of(Pair.of("2", "Romance"), 1L),
-                    Pair.of(Pair.of("2", "Thriller"), 4L),
-                    Pair.of(Pair.of("3", "Action"), 3L),
-                    Pair.of(Pair.of("3", "Adventure"), 2L),
-                    Pair.of(Pair.of("3", "Children"), 1L),
-                    Pair.of(Pair.of("3", "Thriller"), 1L)
+                    Pair.of(Pair.of("Action","2"),4L),
+                    Pair.of(Pair.of("Action","3"),3L),
+                    Pair.of(Pair.of("Adventure","1"),2L),
+                    Pair.of(Pair.of("Adventure","3"),2L),
+                    Pair.of(Pair.of("Animation","1"),1L),
+                    Pair.of(Pair.of("Children","1"),2L),
+                    Pair.of(Pair.of("Children","3"),1L),
+                    Pair.of(Pair.of("Comedy","1"),4L),
+                    Pair.of(Pair.of("Comedy","2"),3L),
+                    Pair.of(Pair.of("Crime","2"),4L),
+                    Pair.of(Pair.of("Drama","2"),1L),
+                    Pair.of(Pair.of("Fantasy","1"),2L),
+                    Pair.of(Pair.of("Romance","1"),3L),
+                    Pair.of(Pair.of("Romance","2"),1L),
+                    Pair.of(Pair.of("Thriller","2"),4L),
+                    Pair.of(Pair.of("Thriller","3"),1L)
             ));
 
     private PCollection<Tuple3<String,String,Long>> ratersMostFreqGenreExpected = MemPipeline.typedCollectionOf(

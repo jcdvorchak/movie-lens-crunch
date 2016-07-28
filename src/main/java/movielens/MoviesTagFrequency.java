@@ -1,7 +1,7 @@
 package movielens;
 
 import movielens.transformations.FindMostFrequent;
-import movielens.transformations.KeySecondToValue;
+import movielens.transformations.PartialKeyToValue;
 import movielens.transformations.LineToPair;
 import movielens.transformations.ValueToKey;
 import org.apache.crunch.*;
@@ -9,7 +9,8 @@ import org.apache.crunch.fn.Aggregators;
 import org.apache.crunch.impl.mr.MRPipeline;
 import org.apache.crunch.io.From;
 import org.apache.crunch.io.To;
-import org.apache.crunch.lib.Join;
+import org.apache.crunch.lib.join.JoinType;
+import org.apache.crunch.lib.join.MapsideJoinStrategy;
 import org.apache.crunch.types.writable.Writables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -70,7 +71,10 @@ public class MoviesTagFrequency extends Configured implements Tool {
         );
 
         // join on MovieId
-        PTable<String, Pair<String, String>> movieTagJoin = Join.innerJoin(movieTable, tagTable);
+        // do a mapside join since movieTable is pretty small
+        MapsideJoinStrategy<String,String,String> mapsideJoinStrategy = MapsideJoinStrategy.create();
+        PTable<String, Pair<String, String>> movieTagJoin = mapsideJoinStrategy.join(movieTable,tagTable, JoinType.INNER_JOIN);
+        //Join.innerJoin(movieTable, tagTable);
 
         // reformat for a key of (movie,tag)
         PTable<Pair<String, String>, Long> movieTagKey = movieTagJoin.parallelDo(
@@ -87,7 +91,7 @@ public class MoviesTagFrequency extends Configured implements Tool {
     public PCollection<Tuple3<String, String, Long>> moviesMostFreqTag(PTable<Pair<String, String>, Long> moviesTagCount) {
         // format for a group by movie
         PTable<String, Pair<String, Long>> movieKey = moviesTagCount.parallelDo(
-                new KeySecondToValue<String,String,Long>(),
+                new PartialKeyToValue<String,Long>(2),
                 Writables.tableOf(Writables.strings(), Writables.pairs(Writables.strings(), Writables.longs()))
         );
 

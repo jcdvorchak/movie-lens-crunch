@@ -1,7 +1,7 @@
 package movielens;
 
 import movielens.transformations.FindMostFrequent;
-import movielens.transformations.KeySecondToValue;
+import movielens.transformations.PartialKeyToValue;
 import movielens.transformations.LineToPair;
 import movielens.transformations.ValueToKey;
 import org.apache.crunch.*;
@@ -10,6 +10,8 @@ import org.apache.crunch.impl.mr.MRPipeline;
 import org.apache.crunch.io.From;
 import org.apache.crunch.io.To;
 import org.apache.crunch.lib.Join;
+import org.apache.crunch.lib.join.JoinType;
+import org.apache.crunch.lib.join.MapsideJoinStrategy;
 import org.apache.crunch.types.writable.Writables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -72,7 +74,10 @@ public class RatersGenreFrequency extends Configured implements Tool {
         );
 
         // join on movie ID -- MovieID,Genre::UserID
-        PTable<String, Pair<String, String>> moviesRatingsJoin = Join.innerJoin(ratingsTable, moviesTable);
+        // do a mapside join since movieTable is pretty small
+        MapsideJoinStrategy<String,String,String> mapsideJoinStrategy = MapsideJoinStrategy.create();
+        PTable<String, Pair<String, String>> moviesRatingsJoin = mapsideJoinStrategy.join(moviesTable,ratingsTable, JoinType.INNER_JOIN);
+//        PTable<String, Pair<String, String>> moviesRatingsJoin = Join.innerJoin(moviesTable, ratingsTable);
 
         // map to UserID,Genre
         PTable<Pair<String, String>, Long> userGenreKey = moviesRatingsJoin.parallelDo(
@@ -89,7 +94,7 @@ public class RatersGenreFrequency extends Configured implements Tool {
     public PCollection<Tuple3<String, String, Long>> ratersMostFreqGenre(PTable<Pair<String,String>,Long> raterGenreCount) {
         // format for group by rater
         PTable<String, Pair<String, Long>> raterKey = raterGenreCount.parallelDo(
-                new KeySecondToValue<String,String,Long>(),
+                new PartialKeyToValue<String,Long>(1),
                 Writables.tableOf(Writables.strings(), Writables.pairs(Writables.strings(), Writables.longs()))
         );
 
