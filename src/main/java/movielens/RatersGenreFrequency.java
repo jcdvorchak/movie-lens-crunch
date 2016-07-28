@@ -21,6 +21,9 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Find the most frequent genre for a rater
  * <p/>
@@ -30,7 +33,7 @@ public class RatersGenreFrequency extends Configured implements Tool {
     protected static String SEPARATOR = ",";
 
     public int run(String[] args) {
-        if (args.length !=2 ) {
+        if (args.length != 2) {
             System.err.println("Incorrect usage: " + ArrayUtils.toString(args));
             System.err.println("Usage: RatersGenreFrequency <inputPath> <outputPath>");
             System.err.println("where inputPath is the parent dir for movielens files");
@@ -48,7 +51,7 @@ public class RatersGenreFrequency extends Configured implements Tool {
         PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies*"));
 
         // count the number of genre occurrences per rater
-        PTable<Pair<String,String>,Long> ratersGenreCount = ratersGenreCount(movies, ratings);
+        PTable<Pair<String, String>, Long> ratersGenreCount = ratersGenreCount(movies, ratings);
 
         // find the most frequent genre per rater
         PCollection<Tuple3<String, String, Long>> userGenreCountCol = ratersMostFreqGenre(ratersGenreCount);
@@ -78,13 +81,13 @@ public class RatersGenreFrequency extends Configured implements Tool {
 
         // join on movie ID -- MovieID,Genre::UserID
         // do a mapside join since movieTable is pretty small
-        MapsideJoinStrategy<String,String,String> mapsideJoinStrategy = MapsideJoinStrategy.create();
-        PTable<String, Pair<String, String>> moviesRatingsJoin = mapsideJoinStrategy.join(moviesTable,ratingsTable, JoinType.INNER_JOIN);
+        MapsideJoinStrategy<String, String, String> mapsideJoinStrategy = MapsideJoinStrategy.create();
+        PTable<String, Pair<String, String>> moviesRatingsJoin = mapsideJoinStrategy.join(moviesTable, ratingsTable, JoinType.INNER_JOIN);
 //        PTable<String, Pair<String, String>> moviesRatingsJoin = Join.innerJoin(moviesTable, ratingsTable);
 
         // map to UserID,Genre
         PTable<Pair<String, String>, Long> userGenreKey = moviesRatingsJoin.parallelDo(
-                new ValueToKey<String,Pair<String,String>>(),
+                new ValueToKey<String, Pair<String, String>>(),
                 Avros.tableOf(Avros.pairs(Avros.strings(), Avros.strings()), Avros.longs())
         );
 
@@ -94,10 +97,10 @@ public class RatersGenreFrequency extends Configured implements Tool {
         );
     }
 
-    public PCollection<Tuple3<String, String, Long>> ratersMostFreqGenre(PTable<Pair<String,String>,Long> raterGenreCount) {
+    public PCollection<Tuple3<String, String, Long>> ratersMostFreqGenre(PTable<Pair<String, String>, Long> raterGenreCount) {
         // format for group by rater
         PTable<String, Pair<String, Long>> raterKey = raterGenreCount.parallelDo(
-                new PartialKeyToValue<String,Long>(1),
+                new PartialKeyToValue<String, Long>(1),
                 Avros.tableOf(Avros.strings(), Avros.pairs(Avros.strings(), Avros.longs()))
         );
 
@@ -107,10 +110,6 @@ public class RatersGenreFrequency extends Configured implements Tool {
                 Avros.triples(Avros.strings(), Avros.strings(), Avros.longs())
         );
     }
-
-    /****************
-     * Custom DoFns *
-     ****************/
 
     /*
      * Flatten movies.dat records into one record per genre
@@ -133,32 +132,12 @@ public class RatersGenreFrequency extends Configured implements Tool {
         }
     }
 
-//    public class FindMax<T extends Comparable> extends DoFn<T, T> {
-//
-//        private PType<T> ptype;
-//        private T maxValue;
-//
-//        public FindMax(PType<T> ptype) {
-//            this.ptype = ptype;
-//        }
-//
-//        public void initialize() {
-//            this.ptype.initialize(getConfiguration());
-//        }
-//
-//        public void process(T input, Emitter<T> emitter) {
-//            if (maxValue == null || maxValue.compareTo(input) > 0) {
-//                // We need to call getDetachedValue here, otherwise the internal
-//                // state of maxValue might change with each call to process()
-//                // and we won't hold on to the max value
-//                maxValue = ptype.getDetachedValue(input);
-//            }
-//        }
-//
-//        public void cleanup(Emitter<T> emitter) {
-//            if (maxValue != null) {
-//                emitter.emit(maxValue);
-//            }
-//        }
-//    }
+    /*
+     * Parse the seconds to a String date
+     */
+    public String secondsToDate(long unixTimeSeconds) {
+//        Date d = new Date(unixTime*1000); // expects ms
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
+        return sdf.format(unixTimeSeconds * 1000); // expects ms
+    }
 }
