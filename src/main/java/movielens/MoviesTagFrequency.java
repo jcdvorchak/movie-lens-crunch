@@ -11,6 +11,7 @@ import org.apache.crunch.io.From;
 import org.apache.crunch.io.To;
 import org.apache.crunch.lib.join.JoinType;
 import org.apache.crunch.lib.join.MapsideJoinStrategy;
+import org.apache.crunch.types.avro.Avros;
 import org.apache.crunch.types.writable.Writables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -61,13 +62,13 @@ public class MoviesTagFrequency extends Configured implements Tool {
         // to kv pair -- MovieId,MovieName
         PTable<String, String> movieTable = movies.parallelDo(
                 new LineToPair(0, 1, 3, SEPARATOR),
-                Writables.tableOf(Writables.strings(), Writables.strings())
+                Avros.tableOf(Avros.strings(), Avros.strings())
         );
 
         // to kv pair -- MovieId,Tag
         PTable<String, String> tagTable = tags.parallelDo(
                 new LineToPair(1, 2, 4, SEPARATOR),
-                Writables.tableOf(Writables.strings(), Writables.strings())
+                Avros.tableOf(Avros.strings(), Avros.strings())
         );
 
         // join on MovieId
@@ -79,7 +80,7 @@ public class MoviesTagFrequency extends Configured implements Tool {
         // reformat for a key of (movie,tag)
         PTable<Pair<String, String>, Long> movieTagKey = movieTagJoin.parallelDo(
                 new ValueToKey<String,Pair<String,String>>(),
-                Writables.tableOf(Writables.pairs(Writables.strings(), Writables.strings()), Writables.longs())
+                Avros.tableOf(Avros.pairs(Avros.strings(), Avros.strings()), Avros.longs())
         );
 
         // sum the value (1) for each key (movie,tag)
@@ -92,13 +93,13 @@ public class MoviesTagFrequency extends Configured implements Tool {
         // format for a group by movie
         PTable<String, Pair<String, Long>> movieKey = moviesTagCount.parallelDo(
                 new PartialKeyToValue<String,Long>(2),
-                Writables.tableOf(Writables.strings(), Writables.pairs(Writables.strings(), Writables.longs()))
+                Avros.tableOf(Avros.strings(), Avros.pairs(Avros.strings(), Avros.longs()))
         );
 
         // find the max genre count for a rater
         return movieKey.groupByKey().parallelDo(
                 new FindMostFrequent(),
-                Writables.triples(Writables.strings(), Writables.strings(), Writables.longs())
+                Avros.triples(Avros.strings(), Avros.strings(), Avros.longs())
         );
     }
 }

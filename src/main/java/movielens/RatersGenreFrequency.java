@@ -12,6 +12,7 @@ import org.apache.crunch.io.To;
 import org.apache.crunch.lib.Join;
 import org.apache.crunch.lib.join.JoinType;
 import org.apache.crunch.lib.join.MapsideJoinStrategy;
+import org.apache.crunch.types.avro.Avros;
 import org.apache.crunch.types.writable.Writables;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -64,13 +65,13 @@ public class RatersGenreFrequency extends Configured implements Tool {
         // map to MovieID,UserID
         PTable<String, String> ratingsTable = ratings.parallelDo(
                 new LineToPair(1, 0, 4, SEPARATOR),
-                Writables.tableOf(Writables.strings(), Writables.strings())
+                Avros.tableOf(Avros.strings(), Avros.strings())
         );
 
         // flatmap to -- MovieID,Genre
         PTable<String, String> moviesTable = movies.parallelDo(
                 new FlattenMovieGenres(),
-                Writables.tableOf(Writables.strings(), Writables.strings())
+                Avros.tableOf(Avros.strings(), Avros.strings())
         );
 
         // join on movie ID -- MovieID,Genre::UserID
@@ -82,7 +83,7 @@ public class RatersGenreFrequency extends Configured implements Tool {
         // map to UserID,Genre
         PTable<Pair<String, String>, Long> userGenreKey = moviesRatingsJoin.parallelDo(
                 new ValueToKey<String,Pair<String,String>>(),
-                Writables.tableOf(Writables.pairs(Writables.strings(), Writables.strings()), Writables.longs())
+                Avros.tableOf(Avros.pairs(Avros.strings(), Avros.strings()), Avros.longs())
         );
 
         // count
@@ -95,13 +96,13 @@ public class RatersGenreFrequency extends Configured implements Tool {
         // format for group by rater
         PTable<String, Pair<String, Long>> raterKey = raterGenreCount.parallelDo(
                 new PartialKeyToValue<String,Long>(1),
-                Writables.tableOf(Writables.strings(), Writables.pairs(Writables.strings(), Writables.longs()))
+                Avros.tableOf(Avros.strings(), Avros.pairs(Avros.strings(), Avros.longs()))
         );
 
         // secondary sort to find the max genre count for a rater
         return raterKey.groupByKey().parallelDo(
                 new FindMostFrequent(),
-                Writables.triples(Writables.strings(), Writables.strings(), Writables.longs())
+                Avros.triples(Avros.strings(), Avros.strings(), Avros.longs())
         );
     }
 
