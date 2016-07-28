@@ -1,5 +1,6 @@
 package movielens;
 
+import com.google.common.base.Splitter;
 import movielens.transformations.FindMostFrequent;
 import movielens.transformations.PartialKeyToValue;
 import movielens.transformations.LineToPair;
@@ -31,7 +32,7 @@ public class RatersGenreFrequency extends Configured implements Tool {
         if (args.length != 2) {
             System.err.println("Incorrect usage");
             System.err.println("Usage: RatersGenreFrequency <inputPath> <outputPath>");
-            System.err.println("where inputPath is the parent dir for *.dat files");
+            System.err.println("where inputPath is the parent dir for movielens files");
             return 1;
         }
         String inputPath = args[0];
@@ -114,6 +115,8 @@ public class RatersGenreFrequency extends Configured implements Tool {
      * Flatten movies.dat records into one record per genre
      */
     public static class FlattenMovieGenres extends DoFn<String, Pair<String, String>> {
+        private static final char GENRE_SEPARATOR = '|';
+        private static final Splitter GENRE_SPLITTER = Splitter.on(GENRE_SEPARATOR).trimResults().omitEmptyStrings();
 
         @Override
         public void process(String input, Emitter<Pair<String, String>> emitter) {
@@ -121,9 +124,8 @@ public class RatersGenreFrequency extends Configured implements Tool {
 
             if (lineArr.length == 3) {
                 String movieId = lineArr[0];
-                String[] genreArr = lineArr[2].split("\\|");
 
-                for (String genre : genreArr) {
+                for (String genre : GENRE_SPLITTER.split(lineArr[2])) {
                     emitter.emit(Pair.of(movieId, genre));
                 }
             }
