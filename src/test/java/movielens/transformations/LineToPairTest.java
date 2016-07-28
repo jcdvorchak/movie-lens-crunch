@@ -8,9 +8,6 @@ import org.apache.crunch.impl.mem.MemPipeline;
 import org.apache.crunch.types.writable.Writables;
 import org.junit.Test;
 
-/**
- * Created by dvorcjc on 7/21/2016.
- */
 public class LineToPairTest {
     private PCollection<String> movies = MemPipeline.typedCollectionOf(
             Writables.strings(),

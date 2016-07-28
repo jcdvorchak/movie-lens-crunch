@@ -5,6 +5,10 @@ import org.apache.crunch.Emitter;
 import org.apache.crunch.Pair;
 
 /**
+ * Convert a String to a Pair of Strings
+ * Splits based on separator, verifies length based on length,
+ *   gets key based on keyIndex, gets value based on valueIndex
+ *
  * Created by dvorcjc on 7/21/2016.
  */
 public class LineToPair extends DoFn<String, Pair<String, String>> {
