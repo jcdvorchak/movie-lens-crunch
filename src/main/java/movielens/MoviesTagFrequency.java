@@ -4,6 +4,7 @@ import movielens.transformations.FindMostFrequent;
 import movielens.transformations.PartialKeyToValue;
 import movielens.transformations.LineToPair;
 import movielens.transformations.ValueToKey;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.crunch.*;
 import org.apache.crunch.fn.Aggregators;
 import org.apache.crunch.impl.mr.MRPipeline;
@@ -24,13 +25,13 @@ import org.apache.hadoop.util.ToolRunner;
  * Created by dvorcjc on 7/21/2016.
  */
 public class MoviesTagFrequency extends Configured implements Tool {
-    private static final String SEPARATOR = "::";
+    protected static String SEPARATOR = ",";
 
     public int run(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.err.println("Incorrect arguments.");
+        if (args.length !=2 ) {
+            System.err.println("Incorrect arguments " + ArrayUtils.toString(args));
             System.err.println("Usage: MoviesTagFrequency <inputPath> <outputPath>");
-            System.err.println("(where inputPath is the parent directory of movielens *.dat files)");
+            System.err.println("where inputPath is the parent dir for movielens files");
             return 1;
         }
         String inputPath = args[0];
@@ -38,9 +39,9 @@ public class MoviesTagFrequency extends Configured implements Tool {
 
         Pipeline pipeline = new MRPipeline(MoviesTagFrequency.class, getConf());
 
-        PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies.dat"));
+        PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies*"));
 
-        PCollection<String> tags = pipeline.read(From.textFile(inputPath + "/tags.dat"));
+        PCollection<String> tags = pipeline.read(From.textFile(inputPath + "/tags*"));
 
         // count the number of tag occurrences per movie
         PTable<Pair<String, String>, Long> moviesTagCount = moviesTagCount(movies, tags);

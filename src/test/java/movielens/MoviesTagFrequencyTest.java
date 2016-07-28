@@ -5,6 +5,7 @@ import org.apache.crunch.*;
 import org.apache.crunch.impl.mem.MemPipeline;
 import org.apache.crunch.types.writable.Writables;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class MoviesTagFrequencyTest {
@@ -70,6 +71,11 @@ public class MoviesTagFrequencyTest {
             ));
 
     private MoviesTagFrequency moviesTagFrequency = new MoviesTagFrequency();
+
+    @Before
+    public void setup() {
+        MoviesTagFrequency.SEPARATOR = "::";
+    }
 
     // for manual verification
     //@Test

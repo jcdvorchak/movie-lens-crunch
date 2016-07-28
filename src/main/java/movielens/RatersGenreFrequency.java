@@ -5,6 +5,7 @@ import movielens.transformations.FindMostFrequent;
 import movielens.transformations.PartialKeyToValue;
 import movielens.transformations.LineToPair;
 import movielens.transformations.ValueToKey;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.crunch.*;
 import org.apache.crunch.fn.Aggregators;
 import org.apache.crunch.impl.mr.MRPipeline;
@@ -26,11 +27,11 @@ import org.apache.hadoop.util.ToolRunner;
  * Created by dvorcjc on 7/25/2016.
  */
 public class RatersGenreFrequency extends Configured implements Tool {
-    private static final String SEPARATOR = "::";
+    protected static String SEPARATOR = ",";
 
     public int run(String[] args) {
-        if (args.length != 2) {
-            System.err.println("Incorrect usage");
+        if (args.length !=2 ) {
+            System.err.println("Incorrect usage: " + ArrayUtils.toString(args));
             System.err.println("Usage: RatersGenreFrequency <inputPath> <outputPath>");
             System.err.println("where inputPath is the parent dir for movielens files");
             return 1;
@@ -41,10 +42,10 @@ public class RatersGenreFrequency extends Configured implements Tool {
         Pipeline pipeline = new MRPipeline(RatersGenreFrequency.class, getConf());
 
         // read in ratings -- UserID::MovieID::Rating::Timestamp
-        PCollection<String> ratings = pipeline.read(From.textFile(inputPath + "/ratings.dat"));
+        PCollection<String> ratings = pipeline.read(From.textFile(inputPath + "/ratings*"));
 
         // read in movies -- MovieID::Title::Genre|Genre|Genre|...
-        PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies.dat"));
+        PCollection<String> movies = pipeline.read(From.textFile(inputPath + "/movies*"));
 
         // count the number of genre occurrences per rater
         PTable<Pair<String,String>,Long> ratersGenreCount = ratersGenreCount(movies, ratings);

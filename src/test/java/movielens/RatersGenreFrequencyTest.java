@@ -5,6 +5,7 @@ import junit.framework.Assert;
 import org.apache.crunch.*;
 import org.apache.crunch.impl.mem.MemPipeline;
 import org.apache.crunch.types.writable.Writables;
+import org.junit.Before;
 import org.junit.Test;
 
 public class RatersGenreFrequencyTest {
@@ -76,6 +77,10 @@ public class RatersGenreFrequencyTest {
 
     private RatersGenreFrequency ratersGenreFrequency = new RatersGenreFrequency();
 
+    @Before
+    public void setup() {
+        RatersGenreFrequency.SEPARATOR = "::";
+    }
 
     // for manual verification
     //@Test
